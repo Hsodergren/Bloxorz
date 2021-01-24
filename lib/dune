@@ -1,0 +1,8 @@
+(library
+ (name bloxorz)
+ (libraries angstrom)
+ (preprocess (pps
+               ppx_deriving.ord
+               ppx_deriving.make
+               ppx_deriving.show
+               ppx_deriving.eq)))
