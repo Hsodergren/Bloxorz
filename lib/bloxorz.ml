@@ -1,5 +1,8 @@
 module Pos = struct
   type t = {row : int; col: int} [@@deriving ord, make, show, eq]
+
+  let row {row;_} = row
+  let col {col;_} = col
 end
 
 module Move = struct
@@ -63,6 +66,14 @@ module TerrainBlock = struct
            | `Start
            | `Goal ] [@@deriving show, eq, ord]
 
+  let to_char = function
+    | `Block -> 'o'
+    | `Glass -> 'g'
+    | `Start -> 'S'
+    | `Goal -> 'G'
+    | `Button i -> Char.chr (i + Char.code '0')
+    | `Empty -> ' '
+
   let of_char = function
     | 'o' -> `Block
     | 'g' -> `Glass
@@ -84,8 +95,10 @@ module Terrain : sig
   val start: t -> Pos.t
   val goal: t -> Pos.t
 
-  val push_button: t -> int -> Block.t -> t
   val get: pos:Pos.t -> t -> TerrainBlock.t
+  val to_alist: t -> (Pos.t * TerrainBlock.t) list
+
+  val push_button: t -> int -> Block.t -> t
 end = struct
   module M = Map.Make(Pos)
   module B = Map.Make(Int)
@@ -115,6 +128,7 @@ end = struct
   let compare {terrain=t1;_} {terrain=t2;_} = M.compare TerrainBlock.compare t1 t2
 
   let get ~pos {terrain;_} = Option.value (M.find_opt pos terrain) ~default:`Empty
+  let to_alist t = M.to_seq t.terrain |> List.of_seq
 
   module Parser = struct
     open Angstrom
@@ -233,14 +247,14 @@ module GameDef : sig
   module State : sig
     type t
 
-    val moves: t -> Move.t list
+    val moves: t -> (Move.t * Terrain.t) list
   end
   val solve: Terrain.t -> State.t option
 end = struct
   module State = struct
     type t = {
       current: Block.t
-    ; moves: Move.t list [@compare fun _ _ -> 0] [@equal fun _ _ -> true]
+    ; moves: (Move.t * Terrain.t) list [@compare fun _ _ -> 0] [@equal fun _ _ -> true]
     ; terrain: Terrain.t
     ; goal: Pos.t } [@@deriving ord]
 
@@ -293,7 +307,7 @@ end = struct
         else begin
           let new_states =
             List.map
-              (fun (b,m,t) -> {state with current=b; moves=m::state.moves; terrain=t})
+              (fun (b,m,t) -> {state with current=b; moves=(m,t)::state.moves; terrain=t})
               (legal_moves current terrain)
           in
           Queue.add_seq q (List.to_seq new_states);
