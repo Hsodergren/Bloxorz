@@ -76,4 +76,5 @@ let () =
   | Some state ->
     let start = Terrain.start terrain in
     let moves = GameDef.State.moves state in
-    simulate (Block.at start) terrain moves
+    simulate (Block.at start) terrain moves;
+    Printf.printf "%d moves\n%!" (List.length moves)
